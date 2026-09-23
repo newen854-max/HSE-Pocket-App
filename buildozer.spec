@@ -1,60 +1,51 @@
 [app]
 
-# Application name
 title = HSE Management System
-
-# Package
 package.name = hsemanagement
 package.domain = com.hse.management
 
-# Source
 source.dir = .
 source.include_exts = py,png,jpg,jpeg,bmp,kv,atlas,ttf,csv,txt
 
-# Version
 version = 2.0.0
 
-# Python requirements
-requirements = python3,kivy,plyer,xlsxwriter,pillow
+# Keep Android dependencies minimal.
+# xlsxwriter is pure Python and can be added later if needed.
+# Pillow is deliberately removed from the Android build.
+requirements = python3,kivy,plyer,xlsxwriter
 
-# Display
 orientation = portrait
 fullscreen = 0
 
-# ============================================================
-# ANDROID
-# ============================================================
+# ------------------------------------------------------------
+# Android
+# ------------------------------------------------------------
 
-# Android API
 android.api = 35
+android.minapi = 24
+android.ndk = 28c
 
-# Minimum Android API
-android.minapi = 23
-
-# Architectures
-android.archs = arm64-v8a,armeabi-v7a
-
-# IMPORTANT:
-# Automatically accept all Android SDK licenses.
 android.accept_sdk_license = True
 
-# Do NOT skip SDK updates/installations.
-android.skip_update = False
+android.archs = arm64-v8a
 
-# Let Buildozer manage its own SDK.
-# Leave android.sdk_path empty.
+android.copy_libs = True
 
-# Backup
 android.allow_backup = True
 
-# Permissions
-android.permissions = READ_MEDIA_IMAGES,READ_MEDIA_VIDEO,READ_MEDIA_VISUAL_USER_SELECTED,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
-
-# APK
 android.debug_artifact = apk
 
-# ============================================================
-# BUILD
-# ============================================================
+android.permissions = INTERNET
+
+# ------------------------------------------------------------
+# Python-for-Android
+# ------------------------------------------------------------
+
+p4a.bootstrap = sdl2
+p4a.branch = master
+
+# ------------------------------------------------------------
+# Build
+# ------------------------------------------------------------
 
 log_level = 2
