@@ -12,41 +12,32 @@ jobs:
 
     steps:
 
-      # ------------------------------------------------------------
-      # Checkout
-      # ------------------------------------------------------------
-      - name: Checkout
+      # ========================================================
+      # 1. CHECKOUT
+      # ========================================================
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ------------------------------------------------------------
-      # Java 17
-      # ------------------------------------------------------------
+      # ========================================================
+      # 2. JAVA 17
+      # ========================================================
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
-      # ------------------------------------------------------------
-      # Python
-      # ------------------------------------------------------------
-      - name: Set up Python
+      # ========================================================
+      # 3. PYTHON 3.11
+      # ========================================================
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # ------------------------------------------------------------
-      # Android SDK
-      # ------------------------------------------------------------
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
-        with:
-          accept-android-sdk-licenses: true
-          log-accepted-android-sdk-licenses: false
-
-      # ------------------------------------------------------------
-      # Linux dependencies
-      # ------------------------------------------------------------
+      # ========================================================
+      # 4. LINUX DEPENDENCIES
+      # ========================================================
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
@@ -55,6 +46,7 @@ jobs:
             git \
             zip \
             unzip \
+            openjdk-17-jdk \
             autoconf \
             automake \
             libtool \
@@ -62,48 +54,103 @@ jobs:
             zlib1g-dev \
             libncurses5-dev \
             libncursesw5-dev \
+            libtinfo5 \
             cmake \
             libffi-dev \
-            libssl-dev
+            libssl-dev \
+            gettext \
+            autopoint
 
-      # ------------------------------------------------------------
-      # Python build tools
-      # ------------------------------------------------------------
+      # ========================================================
+      # 5. INSTALL BUILDZER
+      # ========================================================
       - name: Install Buildozer
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install "buildozer>=1.5.0"
-          pip install "cython<3.0"
+          pip install "buildozer==1.6.0"
+          pip install "cython==0.29.34"
 
-      # ------------------------------------------------------------
-      # Android licenses
-      # ------------------------------------------------------------
-      - name: Accept Android SDK licenses
+      # ========================================================
+      # 6. VERIFY BUILDZER
+      # ========================================================
+      - name: Verify Buildozer
         run: |
-          yes | sdkmanager --licenses || true
+          buildozer --version
+          python --version
+          java -version
 
-      # ------------------------------------------------------------
-      # Clean old Buildozer state
-      # ------------------------------------------------------------
-      - name: Clean Buildozer cache
+      # ========================================================
+      # 7. FORCE BUILDZER SDK LICENSE ACCEPTANCE
+      # ========================================================
+      - name: Configure Android SDK license acceptance
+        run: |
+          echo "Checking buildozer.spec..."
+
+          grep -n "android.accept_sdk_license" buildozer.spec
+
+          if grep -q "^android.accept_sdk_license" buildozer.spec; then
+            echo "SDK license setting already exists."
+          else
+            echo "android.accept_sdk_license = True" >> buildozer.spec
+          fi
+
+          sed -i 's/^android.accept_sdk_license.*/android.accept_sdk_license = True/' buildozer.spec
+
+          echo "Final SDK license setting:"
+          grep -n "android.accept_sdk_license" buildozer.spec
+
+      # ========================================================
+      # 8. FORCE NON-INTERACTIVE P4A
+      # ========================================================
+      - name: Configure python-for-android
+        run: |
+          echo "PYTHONFORANDROID_PREREQUISITES_INSTALL_INTERACTIVE=0" >> "$GITHUB_ENV"
+          echo "APP_ANDROID_ACCEPT_SDK_LICENSE=1" >> "$GITHUB_ENV"
+          echo "BUILDOZER_WARN_ON_ROOT=0" >> "$GITHUB_ENV"
+
+      # ========================================================
+      # 9. REMOVE OLD BUILDOZER CACHE
+      # ========================================================
+      - name: Remove old Buildozer Android cache
         run: |
           rm -rf ~/.buildozer
           rm -rf .buildozer
           rm -rf bin
 
-      # ------------------------------------------------------------
-      # Build APK
-      # ------------------------------------------------------------
-      - name: Build debug APK
+          echo "Old Buildozer cache removed."
+
+      # ========================================================
+      # 10. SHOW FINAL CONFIGURATION
+      # ========================================================
+      - name: Show Buildozer configuration
+        run: |
+          echo "================ buildozer.spec ================"
+          cat buildozer.spec
+          echo "================================================="
+
+      # ========================================================
+      # 11. BUILD APK
+      # ========================================================
+      - name: Build Android APK
         env:
+          APP_ANDROID_ACCEPT_SDK_LICENSE: "1"
           PYTHONFORANDROID_PREREQUISITES_INSTALL_INTERACTIVE: "0"
+          BUILDOZER_WARN_ON_ROOT: "0"
         run: |
           buildozer -v android debug
 
-      # ------------------------------------------------------------
-      # Upload APK
-      # ------------------------------------------------------------
-      - name: Upload APK artifact
+      # ========================================================
+      # 12. SHOW APK
+      # ========================================================
+      - name: Check APK
+        run: |
+          echo "APK files:"
+          ls -lah bin/
+
+      # ========================================================
+      # 13. UPLOAD APK
+      # ========================================================
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: hse-management-debug-apk
