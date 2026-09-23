@@ -17,7 +17,7 @@ jobs:
     steps:
 
       # ------------------------------------------------------
-      # 1. Download repository source
+      # 1. Checkout the GitHub repository
       # ------------------------------------------------------
 
       - name: Checkout
@@ -25,18 +25,42 @@ jobs:
 
 
       # ------------------------------------------------------
-      # 2. Install Python
+      # 2. Install Java 17
+      # ------------------------------------------------------
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+
+      # ------------------------------------------------------
+      # 3. Install Python
       # ------------------------------------------------------
 
       - name: Set up Python
         uses: actions/setup-python@v5
-
         with:
           python-version: "3.11"
 
 
       # ------------------------------------------------------
-      # 3. Install Buildozer
+      # 4. Install Android SDK
+      #
+      # This action automatically accepts the Google Android
+      # SDK licenses.
+      # ------------------------------------------------------
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: false
+
+
+      # ------------------------------------------------------
+      # 5. Install Buildozer
       # ------------------------------------------------------
 
       - name: Install Buildozer
@@ -50,26 +74,62 @@ jobs:
 
 
       # ------------------------------------------------------
-      # 4. Build Android Debug APK
+      # 6. Install Linux dependencies
+      # ------------------------------------------------------
+
+      - name: Install Linux dependencies
+        run: |
+
+          sudo apt-get update
+
+          sudo apt-get install -y \
+            git \
+            zip \
+            unzip \
+            autoconf \
+            automake \
+            libtool \
+            pkg-config \
+            zlib1g-dev \
+            libncurses5-dev \
+            libncursesw5-dev \
+            cmake \
+            libffi-dev \
+            libssl-dev
+
+
+      # ------------------------------------------------------
+      # 7. Accept all Android SDK licenses explicitly
+      #
+      # This is an additional safeguard for Buildozer's own
+      # SDK installation.
+      # ------------------------------------------------------
+
+      - name: Accept Android SDK licenses
+        run: |
+
+          yes | sdkmanager --licenses || true
+
+
+      # ------------------------------------------------------
+      # 8. Build the Android APK
       # ------------------------------------------------------
 
       - name: Build debug APK
+        env:
+          PYTHONFORANDROID_PREREQUISITES_INSTALL_INTERACTIVE: "0"
         run: |
 
           buildozer -v android debug
 
 
       # ------------------------------------------------------
-      # 5. Upload APK as GitHub Actions artifact
+      # 9. Upload the APK
       # ------------------------------------------------------
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
-
         with:
-
           name: hse-management-debug-apk
-
           path: bin/*.apk
-
           if-no-files-found: error
